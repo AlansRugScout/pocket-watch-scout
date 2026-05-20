@@ -220,7 +220,11 @@
 <header>
   <div class="header-left">
     <h1>⌚ Pocket Watch Scout</h1>
-    <p id="client-label">Victorian Silver Pocket Watch Hunter — James Hartley</p>
+    <p id="client-label">Victorian Silver Pocket Watch Hunter — James Hartley
+      <span id="admin-badge" style="display:none;background:rgba(255,255,255,0.15);
+        color:var(--gold-lt);font-size:10px;padding:2px 8px;border-radius:10px;
+        margin-left:8px;letter-spacing:0.05em;">ADMIN VIEW</span>
+    </p>
   </div>
   <div class="header-right">
     <button class="btn btn-scan"   id="scan-btn"   onclick="triggerScan()">🔄 Scan now</button>
@@ -246,11 +250,11 @@
     <div class="stat-value" id="stat-scans">—</div>
     <div class="stat-label">Scans run</div>
   </div>
-  <div class="stat">
+  <div class="stat cost-stat">
     <div class="stat-value cost" id="stat-scan-cost">—</div>
     <div class="stat-label">Last scan cost</div>
   </div>
-  <div class="stat">
+  <div class="stat cost-stat">
     <div class="stat-value cost" id="stat-month-cost">—</div>
     <div class="stat-label">This month</div>
   </div>
@@ -290,7 +294,15 @@ let appData    = null;
 let currentFilter = 'all';
 let gbpToEur   = 1.18;
 
+const IS_ADMIN = new URLSearchParams(window.location.search).get('admin') === 'true';
+
 async function init() {
+  // Show/hide cost stats and admin badge based on admin mode
+  if (!IS_ADMIN) {
+    document.querySelectorAll('.cost-stat').forEach(el => el.style.display = 'none');
+  } else {
+    document.getElementById('admin-badge').style.display = 'inline';
+  }
   await refresh();
   setInterval(refresh, 30000);
 }
@@ -544,7 +556,7 @@ function filterListings(f, el) {
   currentFilter = f;
   document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
-  renderListings();
+  renderListings(); // only re-renders listings, never resets stats
 }
 
 async function triggerScan() {
