@@ -77,12 +77,12 @@ def set_scan_paused(paused: bool):
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 CONFIG = {
-    "scan_interval_hours":   2,
+    "scan_interval_hours":   4,     # every 4 hours — watches don't list as fast as maps
     "min_listing_price_gbp": 20,
     "undervalue_threshold":  2.0,   # 2x for watches — more common than maps
-    "max_listings_per_scan": 60,
+    "max_listings_per_scan": 30,    # lean scan — cost control
     "auto_archive_days":     14,    # watches stay relevant longer
-    "monthly_spend_cap_gbp": 5.0,
+    "monthly_spend_cap_gbp": 5.0,  # auto-pause at £5/month
     "find_limit":            3,     # stop after 3 matches per client brief
     "client_name":           "James Hartley",
 }
