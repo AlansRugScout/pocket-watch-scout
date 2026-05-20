@@ -1,1 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pocket Watch Scout</title>
+<style>
+  :root {
+    --navy:      #1a3a5c;
+    --navy-lt:   #2a4a6c;
+    --navy-dk:   #0f2235;
+    --gold:      #c9922a;
+    --gold-lt:   #e8b84b;
+    --gold-bg:   #fdf6e8;
+    --silver:    #8a9ab0;
+    --silver-lt: #c8d4e0;
+    --emerald:   #1a4a2e;
+    --emerald-lt:#edf5f0;
+    --red:       #8b2020;
+    --bg:        #f4f7fa;
+    --surface:   #ffffff;
+    --border:    #dde4ed;
+    --text:      #1a2535;
+    --muted:     #5a6a7a;
+    --radius:    10px;
+    --shadow:    0 2px 12px rgba(26,58,92,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; }
 
+  /* ── Header ── */
+  header {
+    background: var(--navy);
+    background-image: linear-gradient(135deg, var(--navy-dk) 0%, var(--navy) 50%, var(--navy-dk) 100%);
+    border-bottom: 3px solid var(--gold);
+    padding: 1.4rem 2rem;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+  }
+  .header-left h1 { font-size: 20px; font-weight: 700; color: var(--gold-lt); letter-spacing: 0.02em; }
+  .header-left p  { font-size: 12px; color: var(--silver-lt); margin-top: 2px; opacity: 0.8; }
+  .header-right { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  /* ── Buttons ── */
+  .btn { font-size: 12px; font-weight: 600; padding: 7px 16px; border-radius: 7px;
+         cursor: pointer; border: 1.5px solid; transition: all .15s; font-family: inherit; }
+  .btn-scan   { background: var(--gold); border-color: var(--gold-lt); color: var(--navy-dk); }
+  .btn-scan:hover { background: var(--gold-lt); }
+  .btn-scan:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-pause  { background: transparent; border-color: #e88; color: #e88; }
+  .btn-pause:hover { background: rgba(200,80,80,0.15); }
+  .btn-resume { background: rgba(26,74,46,0.3); border-color: #5dde7a; color: #5dde7a; }
+  .btn-resume:hover { background: rgba(26,74,46,0.5); }
+  .btn-archive { border-color: var(--silver); color: var(--muted); background: transparent; }
+  .btn-archive:hover { background: var(--bg); }
+  .btn-delete  { border-color: #fca5a5; color: var(--red); background: transparent; }
+  .btn-delete:hover { background: #fef2f2; }
+  .btn-deep    { border-color: var(--emerald); color: var(--emerald); background: transparent; }
+  .btn-deep:hover { background: var(--emerald-lt); }
+  .btn-sm { font-size: 11px; padding: 4px 10px; }
+
+  /* ── Pause banner ── */
+  #pause-banner { display:none; background:#fef2f2; border:1px solid #fca5a5;
+                  padding:10px 20px; font-size:13px; color:var(--red);
+                  align-items:center; gap:10px; }
+  #pause-banner.visible { display:flex; }
+
+  /* ── Stats ── */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+               gap: 12px; padding: 16px 20px; background: var(--surface);
+               border-bottom: 1px solid var(--border); }
+  .stat { text-align: center; }
+  .stat-value { font-size: 24px; font-weight: 700; color: var(--navy); line-height: 1; }
+  .stat-value.gold   { color: var(--gold); }
+  .stat-value.green  { color: var(--emerald); }
+  .stat-value.cost   { font-size: 18px; color: var(--red); }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase;
+                letter-spacing: 0.07em; margin-top: 3px; }
+
+  /* ── Progress bar ── */
+  .progress-bar { padding: 10px 20px; background: var(--navy-dk); display: flex;
+                  align-items: center; gap: 12px; }
+  .progress-label { font-size: 11px; color: var(--silver-lt); white-space: nowrap; }
+  .progress-track { flex: 1; height: 6px; background: rgba(255,255,255,0.1);
+                    border-radius: 3px; overflow: hidden; }
+  .progress-fill  { height: 100%; background: var(--gold); border-radius: 3px;
+                    transition: width .3s; }
+  .progress-count { font-size: 11px; color: var(--gold-lt); white-space: nowrap; }
+
+  /* ── Main ── */
+  main { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+  /* ── Filter bar ── */
+  .filter-bar { display: flex; align-items: center; justify-content: space-between;
+                margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  .filter-pills { display: flex; gap: 6px; }
+  .pill { padding: 5px 12px; border: 1px solid var(--border); border-radius: 20px;
+          font-size: 12px; cursor: pointer; transition: all .15s; }
+  .pill.active { background: var(--navy); color: white; border-color: var(--navy); }
+  .archive-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px;
+                    color: var(--muted); cursor: pointer; }
+  .archive-toggle input { accent-color: var(--navy); cursor: pointer; }
+
+  /* ── Section headers ── */
+  .section-header { padding: 7px 14px; font-size: 12px; font-weight: 600;
+                    letter-spacing: .04em; margin: 12px 0 8px; border-radius: 6px; }
+  .new-header { background: #e8f5e9; color: var(--emerald); }
+  .old-header { background: #f0f4f8; color: var(--muted); }
+
+  /* ── Listing card ── */
+  .listing { background: var(--surface); border: 1px solid var(--border);
+             border-radius: var(--radius); margin-bottom: 12px; overflow: hidden;
+             box-shadow: var(--shadow); transition: transform .15s; }
+  .listing:hover { transform: translateY(-1px); }
+  .listing.archived { opacity: 0.5; }
+  .listing.alerted  { border-left: 3px solid var(--gold); }
+  .listing.has-deep { border-left: 3px solid var(--emerald); }
+  .listing-inner { display: flex; }
+
+  /* Gallery */
+  .listing-gallery { width: 140px; height: 140px; flex-shrink: 0; position: relative;
+                     background: var(--bg); overflow: hidden; }
+  .listing-gallery img { position: absolute; top:0; left:0; width:100%; height:100%;
+                         object-fit: cover; display: none; }
+  .listing-gallery img.active { display: block; }
+  .gallery-nav { position: absolute; bottom: 3px; left:0; right:0;
+                 display: flex; justify-content: center; gap: 3px; }
+  .gallery-dot { width:5px; height:5px; border-radius:50%;
+                 background:rgba(255,255,255,0.5); border:none; cursor:pointer; padding:0; }
+  .gallery-dot.active { background: var(--gold-lt); }
+  .gallery-count { position:absolute; top:4px; right:5px; background:rgba(0,0,0,0.5);
+                   color:white; font-size:9px; padding:1px 4px; border-radius:3px; }
+  .listing-placeholder { width:140px; height:140px; flex-shrink:0; background:var(--bg);
+                         display:flex; align-items:center; justify-content:center;
+                         font-size:36px; color:var(--border); }
+
+  .listing-body { padding: 14px 16px; flex: 1; min-width: 0; }
+  .listing-title { font-size: 14px; font-weight: 600; margin-bottom: 4px;
+                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .listing-meta  { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+
+  /* Badge */
+  .badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px;
+           border-radius: 20px; text-transform: uppercase; letter-spacing: .04em; }
+  .badge-buy    { background: var(--emerald-lt); color: var(--emerald); }
+  .badge-watch  { background: var(--gold-bg); color: #8a6420; }
+  .badge-pass   { background: #f0f4f8; color: #6b7280; }
+  .badge-alert  { background: var(--gold-bg); color: var(--gold); }
+
+  /* Prices */
+  .prices { display: flex; align-items: center; gap: 14px; margin-bottom: 8px;
+            flex-wrap: wrap; }
+  .price-main { font-size: 18px; font-weight: 700; color: var(--navy); }
+  .price-eur  { font-size: 12px; color: var(--muted); }
+  .price-est  { font-size: 13px; color: var(--muted); }
+  .price-ratio { font-size: 13px; font-weight: 700; color: var(--emerald); }
+
+  /* Details grid */
+  .details-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                  gap: 6px; margin-bottom: 10px; }
+  .detail-item { background: var(--bg); border-radius: 6px; padding: 6px 8px; }
+  .detail-label { font-size: 9px; color: var(--muted); text-transform: uppercase;
+                  letter-spacing: .06em; display: block; }
+  .detail-value { font-size: 12px; font-weight: 500; color: var(--text); }
+
+  .rationale { font-size: 12px; color: var(--muted); font-style: italic;
+               line-height: 1.5; border-left: 2px solid var(--silver-lt);
+               padding-left: 8px; margin-bottom: 8px; }
+  .red-flags  { font-size: 12px; color: var(--red); margin-bottom: 8px; }
+
+  /* Deep panel */
+  .deep-panel { background: rgba(26,74,46,0.07); border: 1px solid var(--emerald);
+                border-radius: 7px; padding: 10px 12px; margin-bottom: 8px; font-size: 12px; }
+  .deep-panel h4 { font-size: 11px; font-weight: 600; color: var(--emerald);
+                   text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .deep-verdict { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .verdict-genuine { color: var(--emerald); }
+  .verdict-uncertain { color: var(--gold); }
+  .verdict-not-target { color: var(--red); }
+  .deep-findings { font-style: italic; color: var(--muted); line-height: 1.5;
+                   border-left: 2px solid var(--emerald); padding-left: 6px; margin-top: 4px; }
+
+  /* Extra panels */
+  .extra-panel { background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+                 padding: 10px 12px; margin-bottom: 8px; display: none; }
+  .extra-panel.open { display: block; }
+  .extra-panel h4 { font-size: 11px; font-weight: 600; color: var(--muted);
+                    text-transform: uppercase; margin-bottom: 6px; }
+  .extra-panel input { width: 100%; font-size: 12px; padding: 5px 8px;
+                       border: 1px solid var(--border); border-radius: 6px;
+                       font-family: inherit; margin-bottom: 5px; }
+
+  /* Action row */
+  .action-row { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 8px;
+                border-top: 1px solid var(--border); }
+
+  /* Empty */
+  .empty { text-align: center; padding: 48px 24px; color: var(--muted); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+  /* Toast */
+  #toast { position: fixed; bottom: 24px; right: 24px; background: var(--text);
+           color: white; padding: 11px 18px; border-radius: var(--radius);
+           font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 999; }
+  #toast.show { opacity: 1; }
+  .spin { display: inline-block; width: 12px; height: 12px;
+          border: 2px solid rgba(255,255,255,.3); border-top-color: white;
+          border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 5px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 600px) {
+    .listing-inner { flex-direction: column; }
+    .listing-gallery, .listing-placeholder { width: 100%; height: 200px; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>⌚ Pocket Watch Scout</h1>
+    <p id="client-label">Victorian Silver Pocket Watch Hunter — James Hartley</p>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-scan"   id="scan-btn"   onclick="triggerScan()">🔄 Scan now</button>
+    <button class="btn btn-pause"  id="pause-btn"  onclick="pauseScan()">⏸ Pause</button>
+    <button class="btn btn-resume" id="resume-btn" onclick="resumeScan()" style="display:none">▶ Resume</button>
+  </div>
+</header>
+
+<div id="pause-banner">
+  ⏸ <strong>Scanning paused.</strong> Click Resume to restart.
+</div>
+
+<div class="stats-row" id="stats-row">
+  <div class="stat">
+    <div class="stat-value" id="stat-total">—</div>
+    <div class="stat-label">Listings scanned</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value green" id="stat-matches">—</div>
+    <div class="stat-label">Matches found</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-scans">—</div>
+    <div class="stat-label">Scans run</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value cost" id="stat-scan-cost">—</div>
+    <div class="stat-label">Last scan cost</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value cost" id="stat-month-cost">—</div>
+    <div class="stat-label">This month</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" style="font-size:13px;padding-top:4px;" id="stat-last">—</div>
+    <div class="stat-label">Last scan</div>
+  </div>
+</div>
+
+<div class="progress-bar" id="progress-bar">
+  <span class="progress-label">Find progress:</span>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+  <span class="progress-count" id="progress-count">0 / 3 found</span>
+</div>
+
+<main>
+  <div class="filter-bar">
+    <div class="filter-pills">
+      <div class="pill active" onclick="filterListings('all',this)">All</div>
+      <div class="pill" onclick="filterListings('deals',this)">Deals only</div>
+      <div class="pill" onclick="filterListings('alerted',this)">Alerts sent</div>
+    </div>
+    <label class="archive-toggle">
+      <input type="checkbox" id="show-archived" onchange="renderListings()">
+      Show archived
+    </label>
+  </div>
+  <div id="listings-container"></div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+let appData    = null;
+let currentFilter = 'all';
+let gbpToEur   = 1.18;
+
+async function init() {
+  await refresh();
+  setInterval(refresh, 30000);
+}
+
+async function refresh() {
+  try {
+    const r = await fetch('/api/listings');
+    appData = await r.json();
+    gbpToEur = appData.gbp_to_eur || 1.18;
+    renderStats();
+    renderListings();
+    updatePauseState();
+  } catch(e) {
+    console.error('Refresh error:', e);
+  }
+}
+
+function gbp(n) { return '£' + (n||0).toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function eur(n) { return '€' + Math.round((n||0) * gbpToEur).toLocaleString(); }
+
+function renderStats() {
+  const s = appData.stats || {};
+  const c = appData.cost  || {};
+  document.getElementById('stat-total').textContent     = s.total_listings ?? '—';
+  document.getElementById('stat-matches').textContent   = appData.matches_found ?? '—';
+  document.getElementById('stat-scans').textContent     = appData.scan_count ?? '—';
+  document.getElementById('stat-scan-cost').textContent = s.last_scan_cost_gbp != null
+    ? '£' + parseFloat(s.last_scan_cost_gbp).toFixed(4) : '—';
+  document.getElementById('stat-month-cost').textContent = c.this_month_cost_gbp != null
+    ? '£' + parseFloat(c.this_month_cost_gbp).toFixed(2) : '—';
+  const last = appData.last_scan;
+  document.getElementById('stat-last').textContent = last
+    ? new Date(last).toLocaleTimeString('en-IE',{hour:'2-digit',minute:'2-digit'}) + ' ' +
+      new Date(last).toLocaleDateString('en-IE',{day:'numeric',month:'short'})
+    : 'Never';
+
+  // Progress bar
+  const found = appData.matches_found || 0;
+  const limit = appData.find_limit    || 3;
+  const pct   = Math.min(100, Math.round((found / limit) * 100));
+  document.getElementById('progress-fill').style.width  = pct + '%';
+  document.getElementById('progress-count').textContent = `${found} / ${limit} found`;
+}
+
+function updatePauseState() {
+  const paused = appData.scan_paused;
+  document.getElementById('pause-btn').style.display  = paused ? 'none' : 'inline-block';
+  document.getElementById('resume-btn').style.display = paused ? 'inline-block' : 'none';
+  document.getElementById('scan-btn').disabled        = paused;
+  const banner = document.getElementById('pause-banner');
+  if (paused) banner.classList.add('visible'); else banner.classList.remove('visible');
+}
+
+function isNew(l) {
+  if (!l.found_at) return false;
+  return (Date.now() - new Date(l.found_at)) / 3600000 <= 24;
+}
+
+function sortListings(listings) {
+  return [...listings].sort((a, b) => {
+    const rA = a.price_gbp > 0 && (a.analysis||{}).estimated_value_gbp > 0
+      ? (a.analysis.estimated_value_gbp / a.price_gbp) : 0;
+    const rB = b.price_gbp > 0 && (b.analysis||{}).estimated_value_gbp > 0
+      ? (b.analysis.estimated_value_gbp / b.price_gbp) : 0;
+    if (rB !== rA) return rB - rA;
+    return (b.found_at||'').localeCompare(a.found_at||'');
+  });
+}
+
+function galleryHtml(l) {
+  const images = l.all_image_urls && l.all_image_urls.length
+    ? l.all_image_urls : (l.image_url ? [l.image_url] : []);
+  if (!images.length)
+    return `<div class="listing-placeholder">⌚</div>`;
+  const dots = images.length > 1
+    ? `<div class="gallery-nav">${images.map((_,i) =>
+        `<button class="gallery-dot ${i===0?'active':''}" onclick="showImg('${l.item_id}',${i})"></button>`
+      ).join('')}</div>` : '';
+  const count = images.length > 1
+    ? `<span class="gallery-count">1/${images.length}</span>` : '';
+  return `<div class="listing-gallery" id="gal-${l.item_id}">
+    ${images.map((url,i) => `<img src="${esc(url)}" class="${i===0?'active':''}" loading="lazy">`).join('')}
+    ${count}${dots}
+  </div>`;
+}
+
+function showImg(id, idx) {
+  const g = document.getElementById('gal-' + id);
+  if (!g) return;
+  g.querySelectorAll('img').forEach((img,i) => img.classList.toggle('active', i===idx));
+  g.querySelectorAll('.gallery-dot').forEach((d,i) => d.classList.toggle('active', i===idx));
+  const c = g.querySelector('.gallery-count');
+  if (c) c.textContent = `${idx+1}/${g.querySelectorAll('img').length}`;
+}
+
+function deepPanelHtml(deep) {
+  if (!deep) return '';
+  const vc = deep.verdict && deep.verdict.includes('genuine') ? 'verdict-genuine'
+    : deep.verdict && deep.verdict.includes('not') ? 'verdict-not-target'
+    : 'verdict-uncertain';
+  return `<div class="deep-panel">
+    <h4>🔬 Deep Analysis</h4>
+    <div class="deep-verdict ${vc}">${deep.verdict||'—'}</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">
+      Material: <strong>${deep.material_confirmed||'—'}</strong> |
+      Hallmark: <strong>${deep.hallmark_detail||'—'}</strong> |
+      Revised value: <strong>${gbp(deep.estimated_value_gbp)} / ${eur(deep.estimated_value_gbp)}</strong>
+    </div>
+    ${deep.key_findings ? `<div class="deep-findings">${esc(deep.key_findings)}</div>` : ''}
+    ${deep.red_flags && deep.red_flags !== 'none'
+      ? `<div style="color:var(--red);font-size:11px;margin-top:4px;">⚠️ ${esc(deep.red_flags)}</div>` : ''}
+  </div>`;
+}
+
+function listingCard(l) {
+  const a       = l.analysis || {};
+  const ask     = l.price_gbp || 0;
+  const est     = a.estimated_value_gbp || 0;
+  const ratio   = ask > 0 && est > 0 ? (est/ask).toFixed(1) : null;
+  const hasDeep = !!l.deep_analysis;
+  const manualCount = (l.manual_image_paths||[]).length;
+
+  const rec = (a.recommendation || '').toLowerCase();
+  const badgeClass = rec.includes('buy') ? 'badge-buy'
+    : rec === 'watch' ? 'badge-watch' : 'badge-pass';
+
+  const flagHtml = a.red_flags && a.red_flags !== 'none'
+    ? `<div class="red-flags">⚠️ ${esc(a.red_flags)}</div>` : '';
+
+  return `
+  <div class="listing ${l.archived?'archived':''} ${l.alerted?'alerted':''} ${hasDeep?'has-deep':''}"
+       id="listing-${l.item_id}">
+    <div class="listing-inner">
+      ${galleryHtml(l)}
+      <div class="listing-body">
+        <div class="listing-title">${esc(l.title)}</div>
+        <div class="listing-meta">
+          <span class="badge ${badgeClass}">${rec||'unanalysed'}</span>
+          ${l.alerted ? ' <span class="badge badge-alert">📧 alert sent</span>' : ''}
+          &nbsp;eBay · ${fmtDate(l.found_at)}
+          · ${(l.all_image_urls||[]).length} images
+        </div>
+
+        <div class="prices">
+          <span class="price-main">${gbp(ask)}</span>
+          <span class="price-eur">${eur(ask)}</span>
+          ${est > 0 ? `<span class="price-est">Est. ${gbp(est)} / ${eur(est)}</span>` : ''}
+          ${ratio ? `<span class="price-ratio">↑ ${ratio}× undervalued</span>` : ''}
+        </div>
+
+        <div class="details-grid">
+          <div class="detail-item">
+            <span class="detail-label">Type</span>
+            <span class="detail-value">${esc(a.watch_type||'—')}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Maker</span>
+            <span class="detail-value">${esc(a.maker||'—')}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Hallmark</span>
+            <span class="detail-value">${esc(a.hallmark||'—')}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Period</span>
+            <span class="detail-value">${esc(a.period||'—')}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Material</span>
+            <span class="detail-value">${esc(a.material||'—')}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Movement</span>
+            <span class="detail-value">${esc(a.movement||'—')}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Condition</span>
+            <span class="detail-value">${esc(a.condition||'—')}</span>
+          </div>
+        </div>
+
+        ${a.value_rationale ? `<p class="rationale">${esc(a.value_rationale)}</p>` : ''}
+        ${flagHtml}
+        ${deepPanelHtml(l.deep_analysis)}
+
+        <!-- Upload panel -->
+        <div class="extra-panel" id="up-${l.item_id}">
+          <h4>📷 Upload additional photos</h4>
+          <input type="file" id="upinput-${l.item_id}" multiple accept="image/*">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:5px;">
+            eBay photos: ${(l.all_image_urls||[]).length} |
+            Manual uploads: <span id="upcount-${l.item_id}">${manualCount}</span>
+          </div>
+          <button class="btn btn-sm btn-deep" onclick="submitUpload('${l.item_id}')">Upload</button>
+        </div>
+
+        <div class="action-row">
+          ${l.url ? `<a href="${esc(l.url)}" target="_blank" class="btn btn-sm btn-scan">View on eBay ↗</a>` : ''}
+          <button class="btn btn-sm btn-deep" id="deepbtn-${l.item_id}" onclick="runDeep('${l.item_id}')">
+            ${hasDeep ? '🔬 Re-analyse' : '🔬 Deep Analysis'}
+          </button>
+          <button class="btn btn-sm btn-archive" onclick="toggleUpload('${l.item_id}')">📷 Photos</button>
+          <button class="btn btn-sm btn-archive" onclick="archiveListing('${l.item_id}')">
+            ${l.archived ? '↩ Unarchive' : 'Archive'}
+          </button>
+          <button class="btn btn-sm btn-delete" onclick="deleteListing('${l.item_id}')">Delete</button>
+          <span style="margin-left:auto;font-size:11px;color:var(--muted);align-self:center;">
+            ${esc(l.keyword_matched||'')}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderListings() {
+  const showArchived = document.getElementById('show-archived')?.checked || false;
+  let listings = appData.listings || [];
+  if (!showArchived) listings = listings.filter(l => !l.archived);
+
+  if (currentFilter === 'deals') {
+    listings = listings.filter(l => {
+      const a = l.analysis || {};
+      const ask = l.price_gbp || 0;
+      const est = a.estimated_value_gbp || 0;
+      return ask > 0 && est > 0 && (est/ask) >= 2;
+    });
+  } else if (currentFilter === 'alerted') {
+    listings = listings.filter(l => l.alerted);
+  }
+
+  const container = document.getElementById('listings-container');
+  if (!listings.length) {
+    container.innerHTML = `<div class="empty">
+      <div class="empty-icon">⌚</div>
+      <p style="font-weight:500;margin-bottom:6px;">No listings yet</p>
+      <p style="font-size:12px;">Click Scan now to begin hunting for Victorian silver pocket watches.</p>
+    </div>`;
+    return;
+  }
+
+  const newL = sortListings(listings.filter(l => isNew(l)));
+  const oldL = sortListings(listings.filter(l => !isNew(l)));
+  let html = '';
+  if (newL.length) html += `<div class="section-header new-header">🆕 New — Last 24h (${newL.length})</div>` + newL.map(listingCard).join('');
+  if (oldL.length) html += `<div class="section-header old-header">📁 Older (${oldL.length})</div>` + oldL.map(listingCard).join('');
+  container.innerHTML = html;
+}
+
+function filterListings(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderListings();
+}
+
+async function triggerScan() {
+  const btn = document.getElementById('scan-btn');
+  btn.innerHTML = '<span class="spin"></span>Scanning…';
+  btn.disabled  = true;
+  const r    = await fetch('/api/scan', {method:'POST'});
+  const data = await r.json();
+  if (data.status === 'paused') {
+    toast(data.message || 'Scanning is paused');
+    btn.innerHTML = '🔄 Scan now';
+    btn.disabled  = false;
+    return;
+  }
+  toast('Scan started — results appear shortly');
+  setTimeout(async () => { await refresh(); btn.innerHTML='🔄 Scan now'; btn.disabled=false; }, 8000);
+}
+
+async function pauseScan()  { await fetch('/api/pause',  {method:'POST'}); await refresh(); toast('Scanning paused'); }
+async function resumeScan() { await fetch('/api/resume', {method:'POST'}); await refresh(); toast('Scanning resumed'); }
+
+async function archiveListing(id) {
+  await fetch(`/api/archive/${id}`, {method:'POST'});
+  await refresh();
+  toast('Listing updated');
+}
+
+async function deleteListing(id) {
+  if (!confirm('Permanently delete this listing?')) return;
+  await fetch(`/api/delete/${id}`, {method:'DELETE'});
+  await refresh();
+  toast('Listing deleted');
+}
+
+async function runDeep(id) {
+  const btn = document.getElementById('deepbtn-' + id);
+  if (btn) { btn.textContent = '🔬 Analysing…'; btn.disabled = true; }
+  try {
+    const r    = await fetch('/api/deep-analysis/' + id, {method:'POST'});
+    const data = await r.json();
+    if (data.status === 'ok') { await refresh(); toast('Deep analysis complete ✓'); }
+    else {
+      toast('Error: ' + (data.error||'unknown'));
+      if (btn) { btn.textContent='🔬 Deep Analysis'; btn.disabled=false; }
+    }
+  } catch(e) {
+    toast('Error: ' + e.message);
+    if (btn) { btn.textContent='🔬 Deep Analysis'; btn.disabled=false; }
+  }
+}
+
+function toggleUpload(id) {
+  const el = document.getElementById('up-' + id);
+  if (el) el.classList.toggle('open');
+}
+
+async function submitUpload(id) {
+  const input = document.getElementById('upinput-' + id);
+  if (!input || !input.files.length) { toast('Select files first'); return; }
+  const fd = new FormData();
+  for (const f of input.files) fd.append('images', f);
+  const r    = await fetch('/api/upload-images/' + id, {method:'POST', body:fd});
+  const data = await r.json();
+  if (data.ok) {
+    document.getElementById('upcount-' + id).textContent = data.total_manual;
+    toast(`${data.saved} photo(s) uploaded`);
+  } else { toast('Upload failed'); }
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(s) {
+  if (!s) return '';
+  return new Date(s).toLocaleString('en-IE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+}
+
+init();
+</script>
+</body>
+</html>
